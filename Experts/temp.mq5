@@ -3,15 +3,10 @@ CTrade trade;
 
 string currency [8] = {"AUD","CAD","CHF","EUR","GBP","USD","JPY","NZD"};
 string pairs [7] = {"AUDUSD","USDCAD","USDCHF","EURUSD","GBPUSD","USDJPY","NZDUSD"};
+string pairs_invert[7] = {"USDAUD","CADUSD","CHFUSD","USDEUR","USDGBP","JPYUSD","USDNZD"};
 
+int hull_handle;  //handle icustom
 int ccs_handle;   //handle icustom
-int hull_handle_AUDUSD;  //handle icustom
-int hull_handle_USDCAD;  //handle icustom
-int hull_handle_USDCHF;  //handle icustom
-int hull_handle_EURUSD;  //handle icustom
-int hull_handle_GBPUSD;  //handle icustom
-int hull_handle_USDJPY;  //handle icustom
-int hull_handle_NZDUSD;  //handle icustom
 
 string text; //for debuging
 
@@ -31,53 +26,86 @@ void OnTick()
   {
     
     handle_ccs();
-    handle_hull();  
+      
+   handle_hull();
       
    text = "";     
    double ask, bid, point_size, balance, equity ;
-   string condition_hull = handle_hull();      
+   string condition_hull = handle_hull();  
+   string condition_ccs = handle_ccs();    
+   
+   
       
-  
-   for(int i=0;i<=6; i++){        
-         ask = SymbolInfoDouble(pairs[i],SYMBOL_ASK);
-         bid = SymbolInfoDouble(pairs[i],SYMBOL_BID);
-         point_size = SymbolInfoDouble(pairs[i], SYMBOL_POINT ); 
+   if(condition_ccs!="NONE"){          
+         ask = SymbolInfoDouble(condition_ccs,SYMBOL_ASK);
+         bid = SymbolInfoDouble(condition_ccs,SYMBOL_BID);
+         point_size = SymbolInfoDouble(condition_ccs, SYMBOL_POINT ); 
          
          balance = AccountInfoDouble(ACCOUNT_BALANCE);
          equity = AccountInfoDouble(ACCOUNT_EQUITY);  
          
-      if((condition_hull == "buy") && (!Is_Symbol_Already_Open(pairs[i]))){
-         trade.Buy(0.01,pairs[i],ask,0,(ask + 100 * point_size),NULL);  //.Buy(volume,symbol,open_price,SL,TP,comment)
-      }
-      if((condition_hull == "sell") && (!Is_Symbol_Already_Open(pairs[i]))){
-         trade.Sell(0.01,pairs[i],bid,0,(bid - 100 * point_size),NULL);
-      }
-         
-      text = text + "\n" + pairs[i] + "/"+ask+"/"+bid+"/"+point_size+"/"+balance +"/"+equity ;    
-      //Print(text);
-      Comment(text); 
-  }     
+         int check_pair_status =check_pair(condition_ccs);
       
+      if(check_pair(condition_ccs) != -1){
+         if (check_pair_status == 1){
+            if((condition_hull == "buy") && (!Is_Symbol_Already_Open(condition_ccs))){
+               trade.Buy(0.10,condition_ccs,ask,(bid - 300 * point_size),(ask + 300 * point_size),NULL);  //.Buy(volume,symbol,open_price,SL,TP,comment)
+            }
+            if((condition_hull == "sell") && (!Is_Symbol_Already_Open(condition_ccs))){
+               trade.Sell(0.10,condition_ccs,bid,(ask + 300 * point_size),(bid - 300 * point_size),NULL);      
+            }
+         }
+         
+         if (check_pair_status == 2){
+            if((condition_hull == "buy") && (!Is_Symbol_Already_Open(condition_ccs))){
+               trade.Buy(0.10,condition_ccs,ask,(bid - 300 * point_size),(ask + 300 * point_size),NULL);  //.Buy(volume,symbol,open_price,SL,TP,comment)
+            }
+            if((condition_hull == "sell") && (!Is_Symbol_Already_Open(condition_ccs))){
+               trade.Sell(0.10,condition_ccs,bid,(ask + 300 * point_size),(bid - 300 * point_size),NULL);      
+            }
+         }
+      }  
+      
+       
+      //text = text + "\n" + pairs[i] + "/"+ask+"/"+bid+"/"+point_size+"/"+balance +"/"+equity ;    
+      //Print(text);
+      //Comment(text); 
+   }   
+      
+}
+
+int check_pair(string pair_to_check){
+   for(int i=0;i<ArraySize(pairs);i++)
+     {
+      if(StringFind(pairs[i],pair_to_check) != -1)
+        {
+         Comment(pair_to_check);
+         return(1);         
+        }       
+     }
+   
+   for(int i=0;i<ArraySize(pairs);i++)
+     {
+      if(StringFind(pairs_invert[i],pair_to_check) != -1)
+        {
+         Comment(pair_to_check);
+         return(2);         
+        }       
+  }  
+     
+     
+   return(-1);     
 }
 
   
 void handle_init(){
-      ccs_handle = iCustom(NULL,PERIOD_CURRENT,"FlukeMultiCurrencyIndex"); 
+      ccs_handle = iCustom(NULL,PERIOD_H4,"FlukeMultiCurrencyIndex"); 
       handle_ccs();
-      
- hull_handle_AUDUSD= iCustom("AUDUSD",PERIOD_CURRENT,"HullAverage2");
- hull_handle_USDCAD= iCustom("USDCAD",PERIOD_CURRENT,"HullAverage2");
- hull_handle_USDCHF= iCustom("USDCHF",PERIOD_CURRENT,"HullAverage2");
- hull_handle_EURUSD= iCustom("EURUSD",PERIOD_CURRENT,"HullAverage2");
- hull_handle_GBPUSD= iCustom("GBPUSD",PERIOD_CURRENT,"HullAverage2");
- hull_handle_USDJPY= iCustom("USDJPY",PERIOD_CURRENT,"HullAverage2");
- hull_handle_NZDUSD= iCustom("NZDUSD",PERIOD_CURRENT,"HullAverage2");
-
-      handle_hull();  
+  
 }
 
 
-void handle_ccs(){   
+string handle_ccs(){   
      
    double ccs_buffer0 [],ccs_buffer1[],ccs_buffer2[],ccs_buffer3[],ccs_buffer4[],ccs_buffer5[],ccs_buffer6[],ccs_buffer7[];
    ArraySetAsSeries(ccs_buffer0,true);
@@ -108,11 +136,16 @@ void handle_ccs(){
    ccs_score_array[7] = NormalizeDouble(ccs_buffer0[7],4);    
 
 //Comment(ccs_buffer0[0] +"\n"+ ccs_buffer1[0]+"\n"+ ccs_buffer2[0]+"\n"+ ccs_buffer3[0]+"\n"+ ccs_buffer4[0]+"\n"+ ccs_buffer5[0]+"\n"+ ccs_buffer6[0]+"\n"+ ccs_buffer7[0]);
-//Comment("Max/Min:"+ currency[ArrayMaximum(ccs_score_array)]+"/"+ currency[ArrayMinimum(ccs_score_array)]+"\n"+ ccs_score_array[0] +"\n"+ ccs_score_array[1]+"\n"+ ccs_score_array[2]+"\n"+ ccs_score_array[3]+"\n"+ ccs_score_array[4]+"\n"+ ccs_score_array[5]+"\n"+ ccs_score_array[6]+"\n"+ ccs_score_array[7]);
+
+string pair_to_trade = currency[ArrayMaximum(ccs_score_array)]+currency[ArrayMinimum(ccs_score_array)];
+
+return (pair_to_trade);
 }
 
-string handle_hull(){
-
+string handle_hull(string pair){
+      
+   hull_handle = iCustom(pair,PERIOD_H1,"HullAverage2");
+   
    
    double hull_buffer0[],hull_buffer1[];
    
