@@ -101,9 +101,6 @@ double volume=0.1;         // specify a trade operation volume
 
 
 
-
-
-
 void modifying_order(){
 //--- this is a sample order ticket, it should be received
    ulong ticket=1234556;
