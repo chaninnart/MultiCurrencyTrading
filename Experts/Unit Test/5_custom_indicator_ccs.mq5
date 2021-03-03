@@ -55,14 +55,10 @@ void handle_ccs(){
    value_bar0[7] = NormalizeDouble(buffer7[0],4); 
 Comment(buffer0[0] +"\n"+ buffer1[0]+"\n"+ buffer2[0]+"\n"+ buffer3[0]+"\n"+ buffer4[0]+"\n"+ buffer5[0]+"\n"+ buffer6[0]+"\n"+ buffer7[0]);
 Comment("Max/Min: "+ currency[ArrayMaximum(value_bar0)]+ currency[ArrayMinimum(value_bar0)]+"\n"+ value_bar0[0] +"\n"+ value_bar0[1]+"\n"+ value_bar0[2]+"\n"+ value_bar0[3]+"\n"+ value_bar0[4]+"\n"+ value_bar0[5]+"\n"+ value_bar0[6]+"\n"+ value_bar0[7]);
-
 }
       
 
-void comment_this_text(string text){   
-   Print(text);
-   Comment(text);   
-}
+
 
 
 

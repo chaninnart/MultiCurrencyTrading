@@ -43,11 +43,6 @@ return("NONE");
 }
       
 
-void comment_this_text(string text){   
-   Print(text);
-   Comment(text);   
-}
-
 
 
 

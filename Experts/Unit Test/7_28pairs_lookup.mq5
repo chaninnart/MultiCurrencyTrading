@@ -46,8 +46,7 @@ void is_pairs_exist(){
                      pairs[i]= "XXXXXX";
                     }
          }  
-      }
-       
+      }       
 }
 
 void comment_pairs_info(){
