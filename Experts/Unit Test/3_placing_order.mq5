@@ -2,9 +2,7 @@
 CTrade trade;
 int MagicNumber=5652534;
 int slippage=10;
-string pairs [7] = {"AUDUSD","USDCAD","USDCHF","EURUSD","GBPUSD","USDJPY","NZDUSD"};
-
-
+string pairs [7] = {"AUDUSD#","USDCAD#","USDCHF#","EURUSD#","GBPUSD#","USDJPY#","NZDUSD#"};
 
 
 int OnInit(){
@@ -31,8 +29,8 @@ void OnTick()
          
          text = text + "\n" + pairs[i] + "/"+ask+"/"+bid+"/"+point_size+"/"+balance +"/"+equity ; 
          //comment_this_text(text) ;    
-         placing_order();
-
+         //placing_order();
+         placing_buy_order();
       } 
 }
 
@@ -51,7 +49,7 @@ void comment_this_text(string text){
 
 void placing_order(){
    double volume=0.1;         // specify a trade operation volume
-   string symbol="GBPUSD";    //specify the symbol, for which the operation is performed
+   string symbol="GBPUSD#";    //specify the symbol, for which the operation is performed
    int    digits=(int)SymbolInfoInteger(symbol,SYMBOL_DIGITS); // number of decimal places
    double point=SymbolInfoDouble(symbol,SYMBOL_POINT);         // point 0.00001
    double bid=SymbolInfoDouble(symbol,SYMBOL_BID);             // current price for closing LONG
@@ -71,7 +69,7 @@ void placing_order(){
 
 void placing_buy_order(){
 double volume=0.1;         // specify a trade operation volume
-   string symbol="GBPUSD";    //specify the symbol, for which the operation is performed
+   string symbol="GBPUSD#";    //specify the symbol, for which the operation is performed
    int    digits=(int)SymbolInfoInteger(symbol,SYMBOL_DIGITS); // number of decimal places
    double point=SymbolInfoDouble(symbol,SYMBOL_POINT);         // point
    double bid=SymbolInfoDouble(symbol,SYMBOL_BID);             // current price for closing LONG
@@ -86,7 +84,8 @@ double volume=0.1;         // specify a trade operation volume
                                DoubleToString(open_price,digits),
                                DoubleToString(SL,digits),
                                DoubleToString(TP,digits));
-   if(!trade.Buy(volume,symbol,open_price,SL,TP,comment))
+                               
+   if(!trade.Buy(volume,symbol,open_price,0,TP,comment))
      {
       //--- failure message
       Print("Buy() method failed. Return code=",trade.ResultRetcode(),

@@ -35,11 +35,14 @@ int copiedTick [ArraySize(pairs)];
 int tickSize;
 int spread_current ;  
 
+string debug;
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit(){
    EventSetTimer(3);   
+// checking 28 pairs ready to trade if not replace the pair with the working one.   
    isPairExist(); 
       
    init_handle();     //hull indicator icustom init
@@ -55,15 +58,19 @@ void OnTick()  {
 }
 
 void getAllParameters(){  
+
+// get Market Summary Report
+// get Hull 28 pairs reports
       for(int i=0; i< ArraySize(pairs); i++){
             getMarketSummary_report(i);            
             getHull_report(i);
       }  
-      
-      
-      getCCS_report();               //looping 8 times is here (ccs)  
+
+//get CCS report            
+      getCCS_report();               //
          
 }
+
 
 double report_ccs_h4 [8];
 void getCCS_report(){
@@ -88,8 +95,8 @@ double buffer0 [],buffer1[],buffer2[],buffer3[],buffer4[],buffer5[],buffer6[],bu
    report_ccs_h4[5] = NormalizeDouble(buffer5[0],4);
    report_ccs_h4[6] = NormalizeDouble(buffer6[0],4); 
    report_ccs_h4[7] = NormalizeDouble(buffer7[0],4); 
-Print(report_ccs_h4[0] +"\n"+ report_ccs_h4[1]+"\n"+ report_ccs_h4[2]+"\n"+ report_ccs_h4[3]+"\n"+ report_ccs_h4[4]+"\n"+ report_ccs_h4[5]+"\n"+ report_ccs_h4[6]+"\n"+ report_ccs_h4[7]);
-Print("------------------------");
+//Print(report_ccs_h4[0] +"\n"+ report_ccs_h4[1]+"\n"+ report_ccs_h4[2]+"\n"+ report_ccs_h4[3]+"\n"+ report_ccs_h4[4]+"\n"+ report_ccs_h4[5]+"\n"+ report_ccs_h4[6]+"\n"+ report_ccs_h4[7]);
+//Print("------------------------");
 Comment("Max/Min: "+ currency[ArrayMaximum(report_ccs_h4)]+ currency[ArrayMinimum(report_ccs_h4)]+"\n"+ report_ccs_h4[0] +"\n"+ report_ccs_h4[1]+"\n"+ report_ccs_h4[2]+"\n"+ report_ccs_h4[3]+"\n"+ report_ccs_h4[4]+"\n"+ report_ccs_h4[5]+"\n"+ report_ccs_h4[6]+"\n"+ report_ccs_h4[7]);
 };
 
