@@ -231,6 +231,5 @@ void getMarketSummary_report(int i){
          report_market[i].bid = Latest_Price.bid;     
          report_market[i].ask = Latest_Price.ask;
          report_market[i].spread = spread_current; 
-//Print(i,"/",pairs[i],"/",Latest_Price.bid,"/",Latest_Price.ask,"/",spread_current );   
-
+//Print(i,"/",pairs[i],"/",Latest_Price.bid,"/",Latest_Price.ask,"/",spread_current );
 }

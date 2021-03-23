@@ -15,16 +15,19 @@ void OnTimer(){OnTick();}
 
 
 void OnTick(){
-   printInfo();
-      
+   printInfo();      
 }
 
 
+//Show Output On Screen------------------------------------------------------------------------------------------
 string text[30]; //Array of String store custom texts on screen
 void printInfo()
 { 
-   for (int i = 0; i < ArraySize(pairs); i++) { 
-      text[i]= i + ". " +  pairs[i]+ " : ";
+   for (int i = 0; i < ArraySize(pairs); i++) {    
+      text[i] = "";
+         if (i<10) {text[i] = "0"+text [i];}    //arrange the text 00-09
+      text[i] = text[i] + i + ". " +  pairs[i]+ " : ";
+         
    }
    
    text[28] = "The Strongest/Weakest (4Hrs) = ";
@@ -36,19 +39,18 @@ void printInfo()
       string object_name = DoubleToString(i, 0);
       ObjectCreate(0,object_name, OBJ_LABEL,0,0,0);
       ObjectSetString(0,object_name,OBJPROP_FONT,"Arial");
-      ObjectGetInteger(0,object_name,OBJPROP_FONTSIZE,10);
+      ObjectGetInteger(0,object_name,OBJPROP_FONTSIZE,8);
       ObjectSetInteger(0,object_name,OBJPROP_COLOR,clrOrange);
        
       ObjectSetInteger(0,object_name,OBJPROP_XDISTANCE,5);
-      ObjectSetInteger(0,object_name,OBJPROP_YDISTANCE,k);
-       
+      ObjectSetInteger(0,object_name,OBJPROP_YDISTANCE,k);       
 
       ObjectSetString(0,object_name,OBJPROP_TEXT,text[i]);
       i++;
-      k=k+20;
+      k=k+16;
    } 
 }
-
+//-----------------------------------------------------------------------------
 
 
 
