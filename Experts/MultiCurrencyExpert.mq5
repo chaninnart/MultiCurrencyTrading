@@ -72,15 +72,11 @@ void open_Order_Strategy(){
       for(int i=0;i<ArraySize(pairs);i++){          
          if(symbol==pairs[i]){symbol_position = i;}
    }
-
-
-Comment(symbol + "\n" + found_symbol + "\n" + symbol_position + "\n" + report_hull_m15[symbol_position]);
+//Comment(symbol + "\n" + found_symbol + "\n" + symbol_position + "\n" + report_hull_m15[symbol_position]);
    if (!check_Opened_Pair_Symbol(symbol) ){
       if(found_symbol == true  && report_hull_m15[symbol_position] == "buy") {openBuy(volume,symbol);}
       if(found_symbol == false && report_hull_m15[symbol_position] == "sell"){openSell(volume,symbol);}      
    }
-
-   
 }
 //---------------------------------------------------------------------------------
 void openBuy(double volume, string symbol){
