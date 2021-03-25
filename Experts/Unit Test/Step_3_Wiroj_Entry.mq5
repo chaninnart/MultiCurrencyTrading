@@ -43,14 +43,24 @@ void OnTick(){
    open_Order_Strategy();        
 }
 
+//********************************************************************************************************************
 input int slippage = 10; //slippage
-input double profit_target = 20;
+input double profit_target = 0;
 void close_Order_Strategy(){ 
-   for (int i =0; i<PositionsTotal(); i++){   
-      if(report_orders[i].profit > profit_target){      
-         if(!trade.PositionClose(report_orders[i].pos_id,slippage))
-            {Print("Close Position failed. Return code=",trade.ResultRetcode());}
-         else  {Print("Close Position successfully. Return code=",trade.ResultRetcode());}
+   for (int i =0; i<PositionsTotal(); i++){ 
+      //exit strategy 1-------------------  
+      if(report_orders[i].type == 1){ //Order "BUY"
+         if(report_hull_exit[check_Pair_Position_in_Array(report_orders[i].currency)] == "s" && report_orders[i].profit > profit_target){      
+            if(!trade.PositionClose(report_orders[i].id,slippage)){Print("Close Position failed. Return code=",trade.ResultRetcode());}
+            else  {Print("Close Position successfully. Return code=",trade.ResultRetcode());}
+         }
+      }
+      
+      if(report_orders[i].type == 0){ //Order "SELL"
+         if(report_hull_exit[check_Pair_Position_in_Array(report_orders[i].currency)] == "b" && report_orders[i].profit > profit_target){      
+            if(!trade.PositionClose(report_orders[i].id,slippage)){Print("Close Position failed. Return code=",trade.ResultRetcode());}
+            else  {Print("Close Position successfully. Return code=",trade.ResultRetcode());}
+         }
       }
    }
 }
@@ -62,8 +72,8 @@ void open_Order_Strategy(){
    if (!is_pair_already_open ){
          //if(invert_pair == false ){openBuy(volume,bestpair);}  
          //if(invert_pair == true  ){openSell(volume,bestpair);}
-      if(invert_pair == false && report_rsi[check_Pair_Position_in_Array(bestpair)] <30 && report_hull_entry[check_Pair_Position_in_Array(bestpair)] == "b"){openBuy(volume,bestpair,"OS1");}  
-      if(invert_pair == true  && report_rsi[check_Pair_Position_in_Array(bestpair)] >60 && report_hull_entry[check_Pair_Position_in_Array(bestpair)] == "s") {openSell(volume,bestpair,"OS1");}    
+      if(invert_pair == false && report_rsi[check_Pair_Position_in_Array(bestpair)] <50 && report_hull_entry[check_Pair_Position_in_Array(bestpair)] == "b"){openBuy(volume,bestpair,"OS1");}  
+      if(invert_pair == true  && report_rsi[check_Pair_Position_in_Array(bestpair)] >50 && report_hull_entry[check_Pair_Position_in_Array(bestpair)] == "s") {openSell(volume,bestpair,"OS1");}    
    }
 }
 
@@ -125,7 +135,7 @@ void getAllParameters(){
 
 //getOrdersInfo_report********************************************************************************************************
 long my_magic = "5652534";
-struct report1_orders_info_struct{string currency; long pos_id; double price; long pos_magic ;string comment; datetime dt;double profit; report1_orders_info_struct(){currency="";pos_id = 0; price =0.0; pos_magic = "5652534"; comment = ""; dt = 0; profit = 0.0;}};
+struct report1_orders_info_struct{string currency; long id; double price; long magic ;string comment; datetime dt;double profit;int type; report1_orders_info_struct(){currency="";id = 0; price =0.0; magic = "5652534"; comment = ""; dt = 0; profit = 0.0;type = 999;}};
 report1_orders_info_struct report_orders[28];
 void getOrdersInfo_report(){
 {
@@ -139,24 +149,26 @@ void getOrdersInfo_report(){
       string symbol=PositionGetSymbol(i); //  obtain the name of the symbol by which the position was opened
       if(symbol!="") // the position was copied into the cache, work with it
         {
-         long pos_id             = PositionGetInteger(POSITION_IDENTIFIER);
+         long id             = PositionGetInteger(POSITION_IDENTIFIER);
          double price            = PositionGetDouble(POSITION_PRICE_OPEN);
          //ENUM_POSITION_TYPE type = (ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE);
-         long pos_magic          = PositionGetInteger(POSITION_MAGIC);
+         long magic          = PositionGetInteger(POSITION_MAGIC);
          string comment          = PositionGetString(POSITION_COMMENT);
          long pos_datetime       = PositionGetInteger(POSITION_IDENTIFIER);
          datetime dt             = PositionGetInteger(POSITION_TIME);
          double profit           = PositionGetDouble(POSITION_PROFIT);
+         int type                = PositionGetInteger(POSITION_TYPE);
          //if(pos_magic==my_magic)
            //{
            //  process the position with a specified POSITION_MAGIC
                report_orders[i].currency =symbol;  
-               report_orders[i].pos_id = pos_id;
+               report_orders[i].id = id;
                report_orders[i].price = price;
-               report_orders[i].pos_magic = pos_magic;
+               report_orders[i].magic = magic;
                report_orders[i].comment = comment;
                report_orders[i].dt = dt;
                report_orders[i].profit = profit ;
+               report_orders[i].type = type ;  // 0 = buy , 1 = sell
           // }
          //PrintFormat("Position #%d by %s: POSITION_MAGIC=%d, price=%G, type=%s, commentary=%s",pos_id,symbol,pos_magic,price,comment);
         }
@@ -299,10 +311,10 @@ void printInfo()
       //text[i] = text[i] + ask  ;   
       text[i] = text[i] + "   *   HULL = ";
       text[i] = text[i] + report_hull_entry [i];
-      text[i] = text[i] + "   *   HULL2 = ";
-      text[i] = text[i] + report_hull_exit [i];
-      //text[i] = text[i] + "   *    RSI = ";
-      //text[i] = text[i] + DoubleToString(report_rsi [i],1);
+      //text[i] = text[i] + "   *   HULL2 = ";
+      //text[i] = text[i] + report_hull_exit [i];
+      text[i] = text[i] + "   *    RSI = ";
+      text[i] = text[i] + DoubleToString(report_rsi [i],1);
          
    }
    
@@ -347,9 +359,11 @@ void printOrderInfo(){
       //text1[i] = text1[i] + " | Magic = ";
       //text1[i] = text1[i] + report_orders[i].pos_magic;
       //text1[i] = text1[i] + " | Date = ";
-      //text1[i] = text1[i] + TimeToString(report_orders[i].dt);      
-      text1[i] = text1[i] + " | Profit = ";
-      text1[i] = text1[i] + DoubleToString(report_orders[i].profit,2);  
+      //text1[i] = text1[i] + TimeToString(report_orders[i].dt);   
+      text1[i] = text1[i] + " | Type = ";
+      text1[i] = text1[i] + report_orders[i].type;    
+      //text1[i] = text1[i] + " | Profit = ";
+      //text1[i] = text1[i] + DoubleToString(report_orders[i].profit,2);  
       
       if(report_orders[i].currency ==""){text1[i]=" ";}        
    }
