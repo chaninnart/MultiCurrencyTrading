@@ -36,13 +36,20 @@ void OnTick(){
    getAllParameters();   
    printInfo();
    printOrderInfo();
-   if (PositionsTotal()!=0){manage_Order_Strategy();}  
+   if (PositionsTotal()!=0){close_Order_Strategy();}  
    open_Order_Strategy();        
 }
 
-
-void manage_Order_Strategy(){
-   double volume = 0.1;
+input int slippage = 10; //slippage
+input double profit_target = 20;
+void close_Order_Strategy(){ 
+   for (int i =0; i<PositionsTotal(); i++){   
+      if(report_orders[i].profit > profit_target){      
+         if(!trade.PositionClose(report_orders[i].pos_id,slippage))
+            {Print("Close Position failed. Return code=",trade.ResultRetcode());}
+         else  {Print("Close Position successfully. Return code=",trade.ResultRetcode());}
+      }
+   }
 }
 
 
@@ -50,16 +57,15 @@ void open_Order_Strategy(){
    double volume = 0.1;
    bool is_pair_already_open = check_Opened_Pair_Symbol(bestpair);
    if (!is_pair_already_open ){
-         //if(invert_pair == false ){openBuy(volume,bestpair);}  
-         //if(invert_pair == true  ){openSell(volume,bestpair);}
-      if(invert_pair == false && report_hull_m15[check_Pair_Position_in_Array(bestpair)] == "b"){openBuy(volume,bestpair);}  
-      if(invert_pair == true  && report_hull_m15[check_Pair_Position_in_Array(bestpair)] == "s") {openSell(volume,bestpair);}    
+         if(invert_pair == false ){openBuy(volume,bestpair);}  
+         if(invert_pair == true  ){openSell(volume,bestpair);}
+      //if(invert_pair == false && report_hull_m15[check_Pair_Position_in_Array(bestpair)] == "b"){openBuy(volume,bestpair);}  
+      //if(invert_pair == true  && report_hull_m15[check_Pair_Position_in_Array(bestpair)] == "s") {openSell(volume,bestpair);}    
    }
 }
 
-input int SL_input = 1000;
-input int TP_input = 1000;
-
+input int SL_input = 0;
+input int TP_input = 0;
 void openBuy(double volume, string symbol){
    trade.SetExpertMagicNumber(my_magic);
    int digits = (int)SymbolInfoInteger(symbol,SYMBOL_DIGITS); // number of decimal places
@@ -67,6 +73,7 @@ void openBuy(double volume, string symbol){
    double bid = SymbolInfoDouble(symbol,SYMBOL_BID);             // current price for closing LONG
    double sl = bid - SL_input*point;  //sl=NormalizeDouble(sl,digits);   // normalizing Stop Loss
    double tp = bid + TP_input*point;  //tp=NormalizeDouble(tp,digits);   // normalizing Take Profit
+   if (SL_input==0){sl = 0;} if (TP_input==0){tp = 0;}
    
    //--- receive the current open price for LONG positions
    double open_price=SymbolInfoDouble(symbol,SYMBOL_ASK);
@@ -84,6 +91,7 @@ void openSell(double volume, string symbol){
    double ask = SymbolInfoDouble(symbol,SYMBOL_ASK);             // current price for closing LONG
    double sl = ask + SL_input*point;  //sl = NormalizeDouble(sl,digits);   // normalizing Stop Loss
    double tp = ask - TP_input*point;  //tp = NormalizeDouble(tp,digits);   // normalizing Take Profit
+   if (SL_input==0){sl = 0;} if (TP_input==0){tp = 0;}
    
    //--- receive the current open price for LONG positions
    double open_price=SymbolInfoDouble(symbol,SYMBOL_BID);
@@ -163,13 +171,11 @@ void getOrdersInfo_report(){
                report_orders[i].dt = dt;
                report_orders[i].profit = profit ;
           // }
-         PrintFormat("Position #%d by %s: POSITION_MAGIC=%d, price=%G, type=%s, commentary=%s",
-                     pos_id,symbol,pos_magic,price,comment);
+         //PrintFormat("Position #%d by %s: POSITION_MAGIC=%d, price=%G, type=%s, commentary=%s",pos_id,symbol,pos_magic,price,comment);
         }
       else           // call to PositionGetSymbol() was unsuccessful
         {
-         PrintFormat("Error when receiving into the cache the position with index %d."+
-                     " Error code: %d", i, GetLastError());
+         //PrintFormat("Error when receiving into the cache the position with index %d."+" Error code: %d", i, GetLastError());
         }
      }
   }
@@ -344,11 +350,13 @@ void printOrderInfo(){
       //text1[i] = text1[i] + " | Date = ";
       //text1[i] = text1[i] + TimeToString(report_orders[i].dt);      
       text1[i] = text1[i] + " | Profit = ";
-      text1[i] = text1[i] + DoubleToString(report_orders[i].profit,2);          
+      text1[i] = text1[i] + DoubleToString(report_orders[i].profit,2);  
+      
+      if(report_orders[i].currency ==""){text1[i]=" ";}        
    }
    
-   //text1[28] = "The Strongest/Weakest (4Hrs) = "+ bestpair +" (Invert Pair: " + invert_pair + ")";
-   //text1[29] = "-------Fluke--------";
+   text1[28] = "-------------------------------------------------------------";
+   text1[29] = "-------Fluke--------";
 
    int i=0, k=20;
    while (i<30)

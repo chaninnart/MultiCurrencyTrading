@@ -11,21 +11,24 @@ void OnInit(){
    EventSetTimer(3);
 }
 //Initialization Process ***************************************************************************
-int handle_hull[28];    //hull global variable handler
+int handle_hull_1_entry[28];    //hull global variable handler
+int handle_hull_2_exit[28];    //hull global variable handler
 int handle_rsi[28];
 int handle_ccs;
 
-input ENUM_TIMEFRAMES hull_timeframe = PERIOD_M15;
-input ENUM_TIMEFRAMES rsi_timeframe = PERIOD_M15;
-input ENUM_TIMEFRAMES ccs_timeframe = PERIOD_H4;
+input ENUM_TIMEFRAMES hull_entry_timeframe = PERIOD_M15;
+input ENUM_TIMEFRAMES hull_exit_timeframe = PERIOD_M30;
+input ENUM_TIMEFRAMES rsi_entry_timeframe = PERIOD_M30;
+input ENUM_TIMEFRAMES ccs_entry_timeframe = PERIOD_H4;
 
 
 void init_handle(){
       for(int i=0; i< ArraySize(pairs); i++){         //handle hull
-         handle_hull[i] = iCustom(pairs[i],hull_timeframe,"HullAverage2"); 
-         handle_rsi [i] = iRSI(pairs[i],rsi_timeframe,14,PRICE_CLOSE);
+         handle_hull_1_entry[i] = iCustom(pairs[i],hull_entry_timeframe,"HullAverage2"); 
+         handle_hull_2_exit[i] = iCustom(pairs[i],hull_exit_timeframe,"HullAverage2"); 
+         handle_rsi [i] = iRSI(pairs[i],rsi_entry_timeframe,14,PRICE_CLOSE);
       } 
-      handle_ccs = iCustom(NULL,ccs_timeframe,"FlukeMultiCurrencyIndex"); 
+      handle_ccs = iCustom(NULL,ccs_entry_timeframe,"FlukeMultiCurrencyIndex"); 
       //handle_ccs = iCustom(NULL,PERIOD_H4,"FlukeMultiCurrencyIndex"); 
       
 }
@@ -36,13 +39,20 @@ void OnTick(){
    getAllParameters();   
    printInfo();
    printOrderInfo();
-   if (PositionsTotal()!=0){manage_Order_Strategy();}  
+   if (PositionsTotal()!=0){close_Order_Strategy();}  
    open_Order_Strategy();        
 }
 
-
-void manage_Order_Strategy(){
-   double volume = 0.1;
+input int slippage = 10; //slippage
+input double profit_target = 20;
+void close_Order_Strategy(){ 
+   for (int i =0; i<PositionsTotal(); i++){   
+      if(report_orders[i].profit > profit_target){      
+         if(!trade.PositionClose(report_orders[i].pos_id,slippage))
+            {Print("Close Position failed. Return code=",trade.ResultRetcode());}
+         else  {Print("Close Position successfully. Return code=",trade.ResultRetcode());}
+      }
+   }
 }
 
 
@@ -52,78 +62,63 @@ void open_Order_Strategy(){
    if (!is_pair_already_open ){
          //if(invert_pair == false ){openBuy(volume,bestpair);}  
          //if(invert_pair == true  ){openSell(volume,bestpair);}
-      if(invert_pair == false && report_hull_m15[check_Pair_Position_in_Array(bestpair)] == "b"){openBuy(volume,bestpair);}  
-      if(invert_pair == true  && report_hull_m15[check_Pair_Position_in_Array(bestpair)] == "s") {openSell(volume,bestpair);}    
+      if(invert_pair == false && report_rsi[check_Pair_Position_in_Array(bestpair)] <30 && report_hull_entry[check_Pair_Position_in_Array(bestpair)] == "b"){openBuy(volume,bestpair,"OS1");}  
+      if(invert_pair == true  && report_rsi[check_Pair_Position_in_Array(bestpair)] >60 && report_hull_entry[check_Pair_Position_in_Array(bestpair)] == "s") {openSell(volume,bestpair,"OS1");}    
    }
 }
 
-input int SL_input = 1000;
-input int TP_input = 1000;
 
-void openBuy(double volume, string symbol){
+
+//*******************************************************************************************************************
+input int SL_input = 0;
+input int TP_input = 0;
+void openBuy(double volume, string symbol,string comment){
    trade.SetExpertMagicNumber(my_magic);
    int digits = (int)SymbolInfoInteger(symbol,SYMBOL_DIGITS); // number of decimal places
    double point = SymbolInfoDouble(symbol,SYMBOL_POINT);         // point
    double bid = SymbolInfoDouble(symbol,SYMBOL_BID);             // current price for closing LONG
    double sl = bid - SL_input*point;  //sl=NormalizeDouble(sl,digits);   // normalizing Stop Loss
    double tp = bid + TP_input*point;  //tp=NormalizeDouble(tp,digits);   // normalizing Take Profit
+   if (SL_input==0){sl = 0;} if (TP_input==0){tp = 0;}
    
    //--- receive the current open price for LONG positions
    double open_price=SymbolInfoDouble(symbol,SYMBOL_ASK);
-   string comment=StringFormat("Buy %s %G lots at %s, SL=%s TP=%s", symbol,volume, DoubleToString(open_price,digits), DoubleToString(sl,digits), DoubleToString(tp,digits));
+   //comment=StringFormat("Buy %s %G lots at %s, SL=%s TP=%s", symbol,volume, DoubleToString(open_price,digits), DoubleToString(sl,digits), DoubleToString(tp,digits));
                                
    if(!trade.Buy(volume,symbol,open_price,sl,tp,comment))
          {Print("Buy() method failed. Return code=",trade.ResultRetcode(),". Code description: ",trade.ResultRetcodeDescription());}
    else  {Print("Buy() method executed successfully. Return code=",trade.ResultRetcode()," (",trade.ResultRetcodeDescription(),")");}
 }
 
-void openSell(double volume, string symbol){
+void openSell(double volume, string symbol,string comment){
    trade.SetExpertMagicNumber(my_magic);
    int digits=(int)SymbolInfoInteger(symbol,SYMBOL_DIGITS); // number of decimal places
    double point = SymbolInfoDouble(symbol,SYMBOL_POINT);         // point
    double ask = SymbolInfoDouble(symbol,SYMBOL_ASK);             // current price for closing LONG
    double sl = ask + SL_input*point;  //sl = NormalizeDouble(sl,digits);   // normalizing Stop Loss
    double tp = ask - TP_input*point;  //tp = NormalizeDouble(tp,digits);   // normalizing Take Profit
+   if (SL_input==0){sl = 0;} if (TP_input==0){tp = 0;}
    
    //--- receive the current open price for LONG positions
    double open_price=SymbolInfoDouble(symbol,SYMBOL_BID);
-   string comment=StringFormat("Sell %s %G lots at %s, SL=%s TP=%s", symbol,volume, DoubleToString(open_price,digits), DoubleToString(sl,digits), DoubleToString(tp,digits));
+   //comment=StringFormat("Sell %s %G lots at %s, SL=%s TP=%s", symbol,volume, DoubleToString(open_price,digits), DoubleToString(sl,digits), DoubleToString(tp,digits));
                                
    if(!trade.Sell(volume,symbol,open_price,sl,tp,comment))
          {Print("Sell() method failed. Return code=",trade.ResultRetcode(),". Code description: ",trade.ResultRetcodeDescription());}
    else  {Print("Sell() method executed successfully. Return code=",trade.ResultRetcode()," (",trade.ResultRetcodeDescription(),")");}
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+//--------------------------------------------------------------------------------------------------------------------
 
 //***********************************************************************************************************************
 void getAllParameters(){
       for(int i=0; i< ArraySize(pairs); i++){
             getMarketSummary_report(i);            
-            getHull_report(i);
+            getHull_entry_report(i);
+            getHull_exit_report(i);
             getRSI_report(i);
       }              
-      getCCS_report(); 
-      
+      getCCS_report();       
       getOrdersInfo_report();         
 }
 
@@ -163,18 +158,15 @@ void getOrdersInfo_report(){
                report_orders[i].dt = dt;
                report_orders[i].profit = profit ;
           // }
-         PrintFormat("Position #%d by %s: POSITION_MAGIC=%d, price=%G, type=%s, commentary=%s",
-                     pos_id,symbol,pos_magic,price,comment);
+         //PrintFormat("Position #%d by %s: POSITION_MAGIC=%d, price=%G, type=%s, commentary=%s",pos_id,symbol,pos_magic,price,comment);
         }
       else           // call to PositionGetSymbol() was unsuccessful
         {
-         PrintFormat("Error when receiving into the cache the position with index %d."+
-                     " Error code: %d", i, GetLastError());
+         //PrintFormat("Error when receiving into the cache the position with index %d."+" Error code: %d", i, GetLastError());
         }
      }
   }
 }
-
 
 
 //getMarketSummary_report********************************************************************************************************
@@ -198,19 +190,30 @@ int copiedRates [28]; int copiedTick [28]; int tickSize [28]; int spread_current
 //------------------------------------------------------------------------------------------------------------------------
 
 //HULL ********************************************************************************************************************
-string report_hull_m15 [28];
-void getHull_report(int i){     
+string report_hull_entry [28];
+void getHull_entry_report(int i){     
    double buffer1[];
    ArraySetAsSeries(buffer1,true);
-   CopyBuffer(handle_hull[i],1,0,5,buffer1);   
-   report_hull_m15[i] = " "; 
-   if (buffer1[1] == 1.0 && buffer1[2] == 2.0){report_hull_m15[i] = "b";} //1.0 = green / 2.0 = red
-   if (buffer1[1] == 2.0 && buffer1[2] == 1.0){report_hull_m15[i] = "s";}
-};
+   CopyBuffer(handle_hull_1_entry[i],1,0,5,buffer1);   
+   report_hull_entry[i] = " "; 
+   if (buffer1[1] == 1.0 && buffer1[2] == 2.0){report_hull_entry[i] = "b";} //1.0 = green / 2.0 = red
+   if (buffer1[1] == 2.0 && buffer1[2] == 1.0){report_hull_entry[i] = "s";}
+}
+
+string report_hull_exit [28];
+void getHull_exit_report(int i){     
+   double buffer1[];
+   ArraySetAsSeries(buffer1,true);
+   CopyBuffer(handle_hull_2_exit[i],1,0,5,buffer1);   
+   report_hull_exit[i] = " "; 
+   if (buffer1[1] == 1.0 && buffer1[2] == 2.0){report_hull_exit[i] = "b";} //1.0 = green / 2.0 = red
+   if (buffer1[1] == 2.0 && buffer1[2] == 1.0){report_hull_exit[i] = "s";}
+}
 //-------------------------------------------------------------------------------------------------------------------------
 
 //RSI*******************************************************************************************************
 double report_rsi [28];
+
 void getRSI_report(int i){
    double buffer[];
    ArraySetAsSeries(buffer,true);
@@ -294,10 +297,12 @@ void printInfo()
       //text[i] = text[i] + bid + " | " ;
       //   string ask = DoubleToString(report_market[i].ask,5);
       //text[i] = text[i] + ask  ;   
-      text[i] = text[i] + "   *   HULL(15M) = ";
-      text[i] = text[i] + report_hull_m15 [i];
-      text[i] = text[i] + "   *    RSI(15M) = ";
-      text[i] = text[i] + DoubleToString(report_rsi [i],1);
+      text[i] = text[i] + "   *   HULL = ";
+      text[i] = text[i] + report_hull_entry [i];
+      text[i] = text[i] + "   *   HULL2 = ";
+      text[i] = text[i] + report_hull_exit [i];
+      //text[i] = text[i] + "   *    RSI = ";
+      //text[i] = text[i] + DoubleToString(report_rsi [i],1);
          
    }
    
@@ -344,11 +349,13 @@ void printOrderInfo(){
       //text1[i] = text1[i] + " | Date = ";
       //text1[i] = text1[i] + TimeToString(report_orders[i].dt);      
       text1[i] = text1[i] + " | Profit = ";
-      text1[i] = text1[i] + DoubleToString(report_orders[i].profit,2);          
+      text1[i] = text1[i] + DoubleToString(report_orders[i].profit,2);  
+      
+      if(report_orders[i].currency ==""){text1[i]=" ";}        
    }
    
-   //text1[28] = "The Strongest/Weakest (4Hrs) = "+ bestpair +" (Invert Pair: " + invert_pair + ")";
-   //text1[29] = "-------Fluke--------";
+   text1[28] = "-------------------------------------------------------------";
+   text1[29] = "-------Fluke--------";
 
    int i=0, k=20;
    while (i<30)
