@@ -72,8 +72,8 @@ void open_Order_Strategy(){
    if (!is_pair_already_open ){
          //if(invert_pair == false ){openBuy(volume,bestpair);}  
          //if(invert_pair == true  ){openSell(volume,bestpair);}
-      if(invert_pair == false && report_rsi[check_Pair_Position_in_Array(bestpair)] <50 && report_hull_entry[check_Pair_Position_in_Array(bestpair)] == "b"){openBuy(volume,bestpair,"OS1");}  
-      if(invert_pair == true  && report_rsi[check_Pair_Position_in_Array(bestpair)] >50 && report_hull_entry[check_Pair_Position_in_Array(bestpair)] == "s") {openSell(volume,bestpair,"OS1");}    
+      if(invert_pair == false && report_rsi[check_Pair_Position_in_Array(bestpair)] <100 && report_hull_entry[check_Pair_Position_in_Array(bestpair)] == "b"){openBuy(volume,bestpair,"OS1");}  
+      if(invert_pair == true  && report_rsi[check_Pair_Position_in_Array(bestpair)] >0 && report_hull_entry[check_Pair_Position_in_Array(bestpair)] == "s") {openSell(volume,bestpair,"OS1");}    
    }
 }
 
@@ -135,18 +135,16 @@ void getAllParameters(){
 
 //getOrdersInfo_report********************************************************************************************************
 long my_magic = "5652534";
-struct report1_orders_info_struct{string currency; long id; double price; long magic ;string comment; datetime dt;double profit;int type; report1_orders_info_struct(){currency="";id = 0; price =0.0; magic = "5652534"; comment = ""; dt = 0; profit = 0.0;type = 999;}};
+struct report1_orders_info_struct{string currency; long id; double price; long magic ;string comment; datetime dt;double profit;int type; report1_orders_info_struct(){currency="";id = NULL; price =NULL; magic = "5652534"; comment = NULL; dt = NULL; profit = NULL;type = NULL;}};
 report1_orders_info_struct report_orders[28];
 void getOrdersInfo_report(){
 {
-//--- obtain the total number of positions
-   int positions=PositionsTotal();
 //--- scan the list of orders
-   for(int i=0;i<positions;i++)
-     {
+   for(int i=0;i<28;i++){
       ResetLastError();
       //--- copy into the cache, the position by its number in the list
       string symbol=PositionGetSymbol(i); //  obtain the name of the symbol by which the position was opened
+      if(symbol==""){ZeroMemory(report_orders[i]);}
       if(symbol!="") // the position was copied into the cache, work with it
         {
          long id             = PositionGetInteger(POSITION_IDENTIFIER);
@@ -158,9 +156,6 @@ void getOrdersInfo_report(){
          datetime dt             = PositionGetInteger(POSITION_TIME);
          double profit           = PositionGetDouble(POSITION_PROFIT);
          int type                = PositionGetInteger(POSITION_TYPE);
-         //if(pos_magic==my_magic)
-           //{
-           //  process the position with a specified POSITION_MAGIC
                report_orders[i].currency =symbol;  
                report_orders[i].id = id;
                report_orders[i].price = price;
@@ -169,12 +164,6 @@ void getOrdersInfo_report(){
                report_orders[i].dt = dt;
                report_orders[i].profit = profit ;
                report_orders[i].type = type ;  // 0 = buy , 1 = sell
-          // }
-         //PrintFormat("Position #%d by %s: POSITION_MAGIC=%d, price=%G, type=%s, commentary=%s",pos_id,symbol,pos_magic,price,comment);
-        }
-      else           // call to PositionGetSymbol() was unsuccessful
-        {
-         //PrintFormat("Error when receiving into the cache the position with index %d."+" Error code: %d", i, GetLastError());
         }
      }
   }
@@ -182,7 +171,7 @@ void getOrdersInfo_report(){
 
 
 //getMarketSummary_report********************************************************************************************************
-struct report1_market_summary_struct{string currency; double bid; double ask; int spread; report1_market_summary_struct(){currency="";bid = 0.0; ask =0.0;spread=0;}};
+struct report1_market_summary_struct{string currency; double bid; double ask; int spread; report1_market_summary_struct(){currency=NULL;bid = NULL; ask =NULL;spread=NULL;}};
 report1_market_summary_struct report_market[28];
 MqlRates rates[]; MqlTick Latest_Price; // Structure to get the latest prices   
 int copiedRates [28]; int copiedTick [28]; int tickSize [28]; int spread_current ;  void getMarketSummary_report(int i){
@@ -354,25 +343,29 @@ void printOrderInfo(){
       text1[i] = text1[i] + report_orders[i].currency;   
       //text1[i] = text1[i] + " | Id = ";
       //text1[i] = text1[i] + report_orders[i].pos_id;
-      text1[i] = text1[i] + " | Price = ";
-      text1[i] = text1[i] + DoubleToString(report_orders[i].price,3);
+      //text1[i] = text1[i] + " | Price = ";
+      //text1[i] = text1[i] + DoubleToString(report_orders[i].price,3);
       //text1[i] = text1[i] + " | Magic = ";
       //text1[i] = text1[i] + report_orders[i].pos_magic;
       //text1[i] = text1[i] + " | Date = ";
       //text1[i] = text1[i] + TimeToString(report_orders[i].dt);   
       text1[i] = text1[i] + " | Type = ";
       text1[i] = text1[i] + report_orders[i].type;    
-      //text1[i] = text1[i] + " | Profit = ";
-      //text1[i] = text1[i] + DoubleToString(report_orders[i].profit,2);  
+      text1[i] = text1[i] + " | P/L = ";
+      text1[i] = text1[i] + DoubleToString(report_orders[i].profit,2);  
+      text1[i] = text1[i] + " | Time = ";
+   double timepass = TimeCurrent()- report_orders[i].dt; 
+   string duration = DoubleToString(timepass/3600,2) + " Hours";
+      text1[i] = text1[i] + duration;        
       
-      if(report_orders[i].currency ==""){text1[i]=" ";}        
+      if(report_orders[i].type == NULL){text1[i]=" ";}        
    }
    
    text1[28] = "-------------------------------------------------------------";
    text1[29] = "-------Fluke--------";
 
    int i=0, k=20;
-   while (i<30)
+   while (i< 30)
    {
       string object_name = "Order"+DoubleToString(i, 0);
       ObjectCreate(0,object_name, OBJ_LABEL,0,0,0);
