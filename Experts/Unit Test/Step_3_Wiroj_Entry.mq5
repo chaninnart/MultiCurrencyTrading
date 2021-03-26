@@ -140,13 +140,13 @@ report1_orders_info_struct report_orders[28];
 void getOrdersInfo_report(){
 {
 //--- scan the list of orders
+   //ZeroMemory(report_orders);
    for(int i=0;i<28;i++){
       ResetLastError();
       //--- copy into the cache, the position by its number in the list
       string symbol=PositionGetSymbol(i); //  obtain the name of the symbol by which the position was opened
-      if(symbol==""){ZeroMemory(report_orders[i]);}
-      if(symbol!="") // the position was copied into the cache, work with it
-        {
+Print(i+"  "+symbol);    
+      
          long id             = PositionGetInteger(POSITION_IDENTIFIER);
          double price            = PositionGetDouble(POSITION_PRICE_OPEN);
          //ENUM_POSITION_TYPE type = (ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE);
@@ -164,7 +164,7 @@ void getOrdersInfo_report(){
                report_orders[i].dt = dt;
                report_orders[i].profit = profit ;
                report_orders[i].type = type ;  // 0 = buy , 1 = sell
-        }
+       
      }
   }
 }
@@ -358,7 +358,7 @@ void printOrderInfo(){
    string duration = DoubleToString(timepass/3600,2) + " Hours";
       text1[i] = text1[i] + duration;        
       
-      if(report_orders[i].type == NULL){text1[i]=" ";}        
+      if(report_orders[i].profit == 0){text1[i]=" ";}        
    }
    
    text1[28] = "-------------------------------------------------------------";
