@@ -16,11 +16,10 @@ int handle_hull_2_exit[28];    //hull global variable handler
 int handle_rsi[28];
 int handle_ccs;
 
-input ENUM_TIMEFRAMES hull_entry_timeframe = PERIOD_M15;
-input ENUM_TIMEFRAMES hull_exit_timeframe = PERIOD_M30;
-input ENUM_TIMEFRAMES rsi_entry_timeframe = PERIOD_M30;
-input ENUM_TIMEFRAMES ccs_entry_timeframe = PERIOD_H4;
-
+ENUM_TIMEFRAMES hull_entry_timeframe = PERIOD_M15;
+ENUM_TIMEFRAMES hull_exit_timeframe = PERIOD_M30;
+ENUM_TIMEFRAMES rsi_entry_timeframe = PERIOD_M30;
+ENUM_TIMEFRAMES ccs_entry_timeframe = PERIOD_H4;
 
 void init_handle(){
       for(int i=0; i< ArraySize(pairs); i++){         //handle hull
@@ -33,8 +32,6 @@ void init_handle(){
       
 }
 //-----------------------------------------------------------------------------
-
-
 void OnTick(){
    getAllParameters();   
    printInfo();
@@ -43,11 +40,23 @@ void OnTick(){
    open_Order_Strategy();        
 }
 
+
+
+
 //********************************************************************************************************************
-input int slippage = 10; //slippage
-input double profit_target = 0;
+int slippage = 10; //slippage
+double profit_target = 0;
+double position_max_duration_hours = 3.0;
+
 void close_Order_Strategy(){ 
+
+
+
    for (int i =0; i<PositionsTotal(); i++){ 
+      // limit the open position in hours if over close in any condition.
+      double timepass = TimeCurrent()- report_orders[i].dt;
+      if((StringToDouble(timepass/3600))> position_max_duration_hours){trade.PositionClose(report_orders[i].id,slippage);}
+   
       //exit strategy 1-------------------  
       if(report_orders[i].type == 1){ //Order "BUY"
          if(report_hull_exit[check_Pair_Position_in_Array(report_orders[i].currency)] == "s" && report_orders[i].profit > profit_target){      
@@ -65,6 +74,9 @@ void close_Order_Strategy(){
    }
 }
 
+//---------------------------------------------------------------------------------------------------------
+input int rsi_os = 77;  //1. rsi oversold for open position
+input int rsi_ob = 43;   //1. rsi overbought for open position
 
 void open_Order_Strategy(){
    double volume = 0.1;
@@ -72,16 +84,16 @@ void open_Order_Strategy(){
    if (!is_pair_already_open ){
          //if(invert_pair == false ){openBuy(volume,bestpair);}  
          //if(invert_pair == true  ){openSell(volume,bestpair);}
-      if(invert_pair == false && report_rsi[check_Pair_Position_in_Array(bestpair)] <100 && report_hull_entry[check_Pair_Position_in_Array(bestpair)] == "b"){openBuy(volume,bestpair,"OS1");}  
-      if(invert_pair == true  && report_rsi[check_Pair_Position_in_Array(bestpair)] >0 && report_hull_entry[check_Pair_Position_in_Array(bestpair)] == "s") {openSell(volume,bestpair,"OS1");}    
+      if(invert_pair == false && report_rsi[check_Pair_Position_in_Array(bestpair)] <rsi_os && report_hull_entry[check_Pair_Position_in_Array(bestpair)] == "b"){openBuy(volume,bestpair,"OS1");}  
+      if(invert_pair == true  && report_rsi[check_Pair_Position_in_Array(bestpair)] >rsi_ob && report_hull_entry[check_Pair_Position_in_Array(bestpair)] == "s") {openSell(volume,bestpair,"OS1");}    
    }
 }
 
 
-
 //*******************************************************************************************************************
-input int SL_input = 0;
-input int TP_input = 0;
+int SL_input = 1000;
+int TP_input = 1000;
+
 void openBuy(double volume, string symbol,string comment){
    trade.SetExpertMagicNumber(my_magic);
    int digits = (int)SymbolInfoInteger(symbol,SYMBOL_DIGITS); // number of decimal places
@@ -131,44 +143,6 @@ void getAllParameters(){
       getCCS_report();       
       getOrdersInfo_report();         
 }
-
-
-//getOrdersInfo_report********************************************************************************************************
-long my_magic = "5652534";
-struct report1_orders_info_struct{string currency; long id; double price; long magic ;string comment; datetime dt;double profit;int type; report1_orders_info_struct(){currency="";id = NULL; price =NULL; magic = "5652534"; comment = NULL; dt = NULL; profit = NULL;type = NULL;}};
-report1_orders_info_struct report_orders[28];
-void getOrdersInfo_report(){
-{
-//--- scan the list of orders
-   //ZeroMemory(report_orders);
-   for(int i=0;i<28;i++){
-      ResetLastError();
-      //--- copy into the cache, the position by its number in the list
-      string symbol=PositionGetSymbol(i); //  obtain the name of the symbol by which the position was opened
-Print(i+"  "+symbol);    
-      
-         long id             = PositionGetInteger(POSITION_IDENTIFIER);
-         double price            = PositionGetDouble(POSITION_PRICE_OPEN);
-         //ENUM_POSITION_TYPE type = (ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE);
-         long magic          = PositionGetInteger(POSITION_MAGIC);
-         string comment          = PositionGetString(POSITION_COMMENT);
-         long pos_datetime       = PositionGetInteger(POSITION_IDENTIFIER);
-         datetime dt             = PositionGetInteger(POSITION_TIME);
-         double profit           = PositionGetDouble(POSITION_PROFIT);
-         int type                = PositionGetInteger(POSITION_TYPE);
-               report_orders[i].currency =symbol;  
-               report_orders[i].id = id;
-               report_orders[i].price = price;
-               report_orders[i].magic = magic;
-               report_orders[i].comment = comment;
-               report_orders[i].dt = dt;
-               report_orders[i].profit = profit ;
-               report_orders[i].type = type ;  // 0 = buy , 1 = sell
-       
-     }
-  }
-}
-
 
 //getMarketSummary_report********************************************************************************************************
 struct report1_market_summary_struct{string currency; double bid; double ask; int spread; report1_market_summary_struct(){currency=NULL;bid = NULL; ask =NULL;spread=NULL;}};
@@ -229,7 +203,6 @@ string bestpair;
 bool invert_pair;
 void getCCS_report(){
    double buffer0 [],buffer1[],buffer2[],buffer3[],buffer4[],buffer5[],buffer6[],buffer7[];
-
    ArraySetAsSeries(buffer0,true);ArraySetAsSeries(buffer1,true);ArraySetAsSeries(buffer2,true);ArraySetAsSeries(buffer3,true);
    ArraySetAsSeries(buffer4,true);ArraySetAsSeries(buffer5,true);ArraySetAsSeries(buffer6,true);ArraySetAsSeries(buffer7,true);
    CopyBuffer(handle_ccs,0,0,10,buffer0);
@@ -262,6 +235,49 @@ void getCCS_report(){
 }
 //-----------------------------------------------------------------------------------------------------------------------
 
+//getOrdersInfo_report********************************************************************************************************
+long my_magic = "5652534";
+struct report1_orders_info_struct{string currency; long id; double price; long magic ;string comment; datetime dt;double profit;int type; report1_orders_info_struct(){currency="";id = NULL; price =NULL; magic = "5652534"; comment = NULL; dt = NULL; profit = NULL;type = NULL;}};
+report1_orders_info_struct report_orders[28];
+void getOrdersInfo_report(){
+{
+//--- scan the list of orders
+   //ZeroMemory(report_orders);
+   for(int i=0;i<28;i++){
+      ResetLastError();
+      //--- copy into the cache, the position by its number in the list
+      string symbol=PositionGetSymbol(i); //  obtain the name of the symbol by which the position was opened
+ 
+      
+         long id             = PositionGetInteger(POSITION_IDENTIFIER);
+         double price            = PositionGetDouble(POSITION_PRICE_OPEN);
+         //ENUM_POSITION_TYPE type = (ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE);
+         long magic          = PositionGetInteger(POSITION_MAGIC);
+         string comment          = PositionGetString(POSITION_COMMENT);
+         long pos_datetime       = PositionGetInteger(POSITION_IDENTIFIER);
+         datetime dt             = PositionGetInteger(POSITION_TIME);
+         double profit           = PositionGetDouble(POSITION_PROFIT);
+         int type                = PositionGetInteger(POSITION_TYPE);
+               report_orders[i].currency =symbol;  
+               report_orders[i].id = id;
+               report_orders[i].price = price;
+               report_orders[i].magic = magic;
+               report_orders[i].comment = comment;
+               report_orders[i].dt = dt;
+               report_orders[i].profit = profit ;
+               report_orders[i].type = type ;  // 0 = buy , 1 = sell
+     }
+  }
+}
+
+
+
+
+
+
+
+
+
 //Helper Functions***************************************************************************************
 bool check_Opened_Pair_Symbol(string symbol){
    bool result = false;
@@ -280,9 +296,6 @@ int check_Pair_Position_in_Array(string symbol){
    }
    return (-1);
 }
-
-
-
 
 //Show Output On Screen*********************************************************************************************************
 string text[30]; //Array of String store custom texts on screen
