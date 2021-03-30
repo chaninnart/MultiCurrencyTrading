@@ -46,7 +46,7 @@ void OnTick(){
 //********************************************************************************************************************
 int slippage = 10; //slippage
 double profit_target = 0;
-double position_max_duration_hours = 3.0;
+input double position_max_duration_hours = 171.0; //Max Duration (Hours) 170
 
 void close_Order_Strategy(){ 
 
@@ -75,8 +75,8 @@ void close_Order_Strategy(){
 }
 
 //---------------------------------------------------------------------------------------------------------
-input int rsi_os = 77;  //1. rsi oversold for open position
-input int rsi_ob = 43;   //1. rsi overbought for open position
+input int rsi_os = 80;  //1. rsi oversold for open position 77
+input int rsi_ob = 40;   //1. rsi overbought for open position 43
 
 void open_Order_Strategy(){
    double volume = 0.1;
@@ -91,8 +91,8 @@ void open_Order_Strategy(){
 
 
 //*******************************************************************************************************************
-int SL_input = 1000;
-int TP_input = 1000;
+input int SL_input = 0; //2. Stop Loss while open position 0
+input int TP_input = 0;    //2. Take Profit while open position 400
 
 void openBuy(double volume, string symbol,string comment){
    trade.SetExpertMagicNumber(my_magic);
@@ -269,13 +269,6 @@ void getOrdersInfo_report(){
      }
   }
 }
-
-
-
-
-
-
-
 
 
 //Helper Functions***************************************************************************************
